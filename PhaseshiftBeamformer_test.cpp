@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
@@ -6,14 +7,14 @@
 
 using namespace std;
 
-typedef matrix_t matrix_t;
+
 
 #define N 1001
 #define NUM_ELEMENTS 7
 
 
 ////////////////////////// 确定对比精度 //////////////////////////
-#ifdef matrix_t_DATA
+#ifdef data_tb_DATA
 #define ABS_ERR_THRESH 0.1
 #else
 #define ABS_ERR_THRESH 0.001
@@ -21,12 +22,12 @@ typedef matrix_t matrix_t;
 
 
 ////////////////////////// 是否输出对比数据 //////////////////////////
-#define WINDOW_FN_DEBUG 1
+#define WINDOW_FN_DEBUG 0
 
 
-void GenerateInput(matrix_t* re, matrix_t* im) {
+void GenerateInput(data_tb* re, data_tb* im) {
     // Generate input signal
-    matrix_t t[N];
+    data_tb t[N];
     for (int i = 0; i < N; i++) {
         t[i] = i;
     }
@@ -35,9 +36,9 @@ void GenerateInput(matrix_t* re, matrix_t* im) {
     // 打开文件
     outFile.open("Signal.txt");
 
-    matrix_t fsignal = 0.01;
-    //matrix_t re[N];
-    //matrix_t im[N];
+    data_tb fsignal = 0.01;
+    //data_tb re[N];
+    //data_tb im[N];
     for (int i = 0; i < N; i++) {
         re[i] = sin(2 * M_PI * fmod(fsignal * t[i], 1.0));
         im[i] = 0;
@@ -53,21 +54,20 @@ void GenerateInput(matrix_t* re, matrix_t* im) {
 
 
 // 添加噪声函数
-void addNoise(matrix_t (*cov_Mat_re)[NUM_ELEMENTS], matrix_t (*cov_Mat_im)[NUM_ELEMENTS], matrix_t variance) {
+void addNoise(data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELEMENTS], data_tb variance) {
     // 设置随机数种子
     srand((unsigned)time(NULL));
     double randNum_re;
     double randNum_im;
     ofstream FILE;
     //Save the results to a file
-    FILE.open ("result_noised.dat");
+    FILE.open ("Noised.dat");
     for (int i = 0; i < N; i++) {
     	for (int j = 0; j < NUM_ELEMENTS; j++) {
     	randNum_re = (double)rand() / RAND_MAX-0.5;
     	randNum_im = (double)rand() / RAND_MAX-0.5;
     	cov_Mat_re[i][j] += sqrt(variance) * randNum_re;
     	cov_Mat_im[i][j] += sqrt(variance) * randNum_im;
-
     	}
     	FILE << cov_Mat_re[i][1] << endl;
 
@@ -75,17 +75,17 @@ void addNoise(matrix_t (*cov_Mat_re)[NUM_ELEMENTS], matrix_t (*cov_Mat_im)[NUM_E
     FILE.close();
 }
 
-void Collectwave(matrix_t* rx_re, matrix_t* rx_im, matrix_t (*cov_Mat_re)[NUM_ELEMENTS], matrix_t (*cov_Mat_im)[NUM_ELEMENTS], matrix_t incidentAngle)
+void collectWave(data_tb* rx_re, data_tb* rx_im, data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELEMENTS], data_tb incidentAngle)
 {
 
 	// 位置初始化
-	    matrix_t Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
+	    data_tb Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
 
 	// 权重
-	    matrix_t v2_re[NUM_ELEMENTS], v2_im[NUM_ELEMENTS];
+	    data_tb v2_re[NUM_ELEMENTS], v2_im[NUM_ELEMENTS];
 
-	    matrix_t c = 3e8;
-	    matrix_t fc = 300e6;
+	    data_tb c = 3e8;
+	    data_tb fc = 300e6;
 	    // 打开文件
 	    //outFile.open("Weight.txt");
 	// Position
@@ -93,7 +93,7 @@ void Collectwave(matrix_t* rx_re, matrix_t* rx_im, matrix_t (*cov_Mat_re)[NUM_EL
 	        v2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
 	        v2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
 	        // 写入数据
-	        //outFile << w2_re[i] << w2_im[i] << "i" << i <<  endl;
+	        //outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
 	    }
 
 	    for (int i = 0; i < N; i++) {
@@ -106,12 +106,10 @@ void Collectwave(matrix_t* rx_re, matrix_t* rx_im, matrix_t (*cov_Mat_re)[NUM_EL
 
 
 
-void SW_PhaseshiftBeamformer(
-		matrix_t (*cov_Mat_re)[NUM_ELEMENTS],
-		matrix_t (*cov_Mat_im)[NUM_ELEMENTS],
-		matrix_t steeringAngle,
-		matrix_t* y_re,
-		matrix_t* y_im)
+void computeWeights(
+		data_tb steeringAngle,
+		data_tb* weightsRe,
+		data_tb* weightsIm)
 {
 
     std::ofstream outFile;
@@ -119,27 +117,82 @@ void SW_PhaseshiftBeamformer(
     outFile.open("Weights.dat");
 
 	// 位置初始化
-	matrix_t Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
+	data_tb Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
     // 权重
-    matrix_t w2_re[NUM_ELEMENTS], w2_im[NUM_ELEMENTS];
-    matrix_t c = 3e8;
-    matrix_t fc = 300e6;
 
+    data_tb c = 3e8;
+    data_tb fc = 300e6;
 
     // w是复数，分实部和虚部计算
 
     for (int i = 0; i < NUM_ELEMENTS; i++) {
-        w2_re[i] = hls::cos(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
-        w2_im[i] = hls::sin(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
+    	weightsRe[i] = hls::cos(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
+        weightsIm[i] = hls::sin(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
         // 写入数据
-        outFile << w2_re[i] << w2_im[i] << "i" << i <<  endl;
+        outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
     }
 
     // 关闭文件
     outFile.close();
 
+}
+
+data_typeB datatypeConverter(data_typeA data_i){
+	data_typeB data_o = data_typeB(data_i);
+	return data_o;
+}
+
+void parametersConverter(
+		data_tb (*cov_Mat_re)[NUM_ELEMENTS],
+		data_tb (*cov_Mat_im)[NUM_ELEMENTS],
+		//data_tb* steeringAngle,
+		data_tb* weightsRe,
+		data_tb* weightsIm,
+		data_psb (*hw_cov_Mat_re)[NUM_ELEMENTS],
+		data_psb (*hw_cov_Mat_im)[NUM_ELEMENTS],
+		//data_psb* hw_steeringAngle,
+		data_psb* hw_weightsRe,
+		data_psb* hw_weightsIm,
+		data_tb* y_re,
+		data_tb* y_im,
+		data_psb* hw_y_re,
+		data_psb* hw_y_im){
+
+	for (int i = 0; i < N; i++) {
+		hw_y_re[i] = datatypeConverter(y_re[i]);
+		hw_y_im[i] = datatypeConverter(y_im[i]);
+	        for (int j = 0; j < NUM_ELEMENTS; j++) {
+	        	hw_cov_Mat_re[i][j] = datatypeConverter(cov_Mat_re[i][j]);
+	        	hw_cov_Mat_im[i][j] = datatypeConverter(cov_Mat_im[i][j]);
+	        }
+	}
+	for (int j = 0; j < NUM_ELEMENTS; j++) {
+	hw_weightsRe[j] = datatypeConverter(weightsRe[j]);
+	hw_weightsIm[j] = datatypeConverter(weightsIm[j]);
+
+	//cout << "hw_weightsRe[i]:   " << hw_weightsRe[i] <<endl;
+	//cout << "weightsRe[i]:   " << weightsRe[i] <<endl;
+	}
+}
+
+
+
+
+
+void SW_PhaseshiftBeamformer(
+		data_tb (*cov_Mat_re)[NUM_ELEMENTS],
+		data_tb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_tb steeringAngle,
+		data_tb* weightsRe,
+		data_tb* weightsIm,
+		data_tb* y_re,
+		data_tb* y_im)
+{
+
+    std::ofstream outFile;
+
     // 打开文件
-    outFile.open("output.dat");
+    outFile.open("SWoutput.dat");
     // Perform beamforming
 
 
@@ -148,12 +201,12 @@ void SW_PhaseshiftBeamformer(
         y_im[i] = 0.0;
  // 初始化
         for (int j = 0; j < NUM_ELEMENTS; j++) {
-            matrix_t rx_w2_re = cov_Mat_re[i][j] * w2_re[j] - cov_Mat_im[i][j] * w2_im[j]; // 实部
-            matrix_t rx_w2_im = cov_Mat_re[i][j] * w2_im[j] + cov_Mat_im[i][j] * w2_re[j]; // 虚部
-            //cout << rx_w2_re << "rx_w2_re" <<endl;
+            data_tb rx_weightsRe = cov_Mat_re[i][j] * weightsRe[j] - cov_Mat_im[i][j] * weightsIm[j]; // 实部
+            data_tb rx_weightsIm = cov_Mat_re[i][j] * weightsIm[j] + cov_Mat_im[i][j] * weightsRe[j]; // 虚部
+            //cout << rx_weightsRe << "rx_weightsRe" <<endl;
  // j从1到7：天线入射的叠加
-            y_re[i] += rx_w2_re;
-            y_im[i] += rx_w2_im;
+            y_re[i] += rx_weightsRe;
+            y_im[i] += rx_weightsIm;
         }
  // 除以7：功率归一
 
@@ -175,34 +228,58 @@ int main()
 {
 
     // Initialize input
-    matrix_t rx_re[N], rx_im[N];
-    //for (int i = 0; i < N; i++) {
-    //    matrix_t rand_val = (matrix_t)rand() / RAND_MAX;
-    //    rx_re[i] = sin(2 * M_PI * 0.01 * i) + 0.1 * rand_val;
-    //   rx_im[i] = 0.1 * rand_val;
-    //}
-    matrix_t cov_Mat_re[N][NUM_ELEMENTS], cov_Mat_im[N][NUM_ELEMENTS];
+    data_tb rx_re[N], rx_im[N];
+    data_psb hw_rx_re[N], hw_rx_im[N];
+
+
+    data_tb cov_Mat_re[N][NUM_ELEMENTS], cov_Mat_im[N][NUM_ELEMENTS];
+    data_psb hw_cov_Mat_re[N][NUM_ELEMENTS], hw_cov_Mat_im[N][NUM_ELEMENTS];
 
 
     // Set incident angle
-    matrix_t incidentAngle = M_PI/3;
-    matrix_t steeringAngle = -M_PI/3;
-    matrix_t variance = 1;
+    data_tb incidentAngle = M_PI/3;
+    data_tb steeringAngle = -M_PI/3;
+    data_psb hw_steeringAngle = -M_PI/3;
+    data_tb variance = 1;
+    data_tb weightsRe[NUM_ELEMENTS], weightsIm[NUM_ELEMENTS];
+    data_psb hw_weightsRe[NUM_ELEMENTS], hw_weightsIm[NUM_ELEMENTS];
 
     // Initialize output
-    matrix_t hw_result_re[N], hw_result_im[N];
-    matrix_t sw_result_re[N], sw_result_im[N];
+    data_psb hw_result_re[N], hw_result_im[N];
+    data_tb sw_result_re[N], sw_result_im[N];
+
 
 	GenerateInput(rx_re, rx_im);
 
-	Collectwave(rx_re, rx_im, cov_Mat_re, cov_Mat_im, incidentAngle);
+	collectWave(rx_re, rx_im, cov_Mat_re, cov_Mat_im, incidentAngle);
 
-	addNoise( cov_Mat_re, cov_Mat_im, variance);
+	addNoise(cov_Mat_re, cov_Mat_im, variance);
+
+	computeWeights(steeringAngle, weightsRe, weightsIm);
+
     // Call beamforming SW function
-    SW_PhaseshiftBeamformer(cov_Mat_re, cov_Mat_im, steeringAngle, sw_result_re, sw_result_im);
+    SW_PhaseshiftBeamformer(cov_Mat_re, cov_Mat_im, steeringAngle, weightsRe, weightsIm, sw_result_re, sw_result_im);
+
+    parametersConverter(
+    		cov_Mat_re,
+    		cov_Mat_im,
+     		weightsRe,
+    		weightsIm,
+    		hw_cov_Mat_re,
+    		hw_cov_Mat_im,
+    		hw_weightsRe,
+    		hw_weightsIm,
+			rx_re,
+			rx_im,
+			hw_rx_re,
+			hw_rx_im
+			);
+
+
+    //PhaseshiftBeamformer(hw_cov_Mat_re, hw_cov_Mat_im, hw_steeringAngle, hw_weightsRe, hw_weightsIm, hw_sw_result_re, hw_sw_result_im);
 
     // Call DUT
-    PhaseshiftBeamformer(rx_re, rx_im, incidentAngle, hw_result_re, hw_result_im);
+    PhaseshiftBeamformer(hw_cov_Mat_re, hw_cov_Mat_im, hw_steeringAngle, hw_weightsRe, hw_weightsIm, hw_result_re, hw_result_im);
 
 ////////////////////////// 结果对比 //////////////////////////
 	unsigned err_cnt = 0;
@@ -214,8 +291,8 @@ int main()
 
 //循环求差
    for (unsigned i = 0; i < N; i++) {
-      matrix_t abs_err_re = hw_result_re[i] - sw_result_re[i];
-      matrix_t abs_err_im = hw_result_im[i] - sw_result_im[i];
+      data_tb abs_err_re = (data_tb)hw_result_re[i] - (data_tb)sw_result_re[i];
+      data_tb abs_err_im = (data_tb)hw_result_im[i] - (data_tb)sw_result_im[i];
 
 
 ////////////////////////// 输出每组差值 //////////////////////////
@@ -232,8 +309,9 @@ int main()
          cout << "  Got: "  << hw_result_re[i] << " + j " << hw_result_im[i];
          cout << "  Delta: " << abs_err_re << " + j " << abs_err_im << endl;
          err_cnt++;
+         cout << endl;
       }
-   cout << endl;
+
    }
 
    if (err_cnt) {

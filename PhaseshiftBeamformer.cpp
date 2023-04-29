@@ -1,53 +1,46 @@
+
 #include "PhaseshiftBeamformer.h"
 
 
 void PhaseshiftBeamformer(
-    matrix_t rx_re[N],
-    matrix_t rx_im[N],
-    matrix_t incidentAngle,
-    matrix_t y_re[N],
-    matrix_t y_im[N])
+		data_psb (*cov_Mat_re)[NUM_ELEMENTS],
+		data_psb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_psb steeringAngle,
+		data_psb* weightsRe,
+		data_psb* weightsIm,
+		data_psb* y_re,
+		data_psb* y_im)
 {
-	// 位置初始化
-	matrix_t Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
-    
-// 权重
-    matrix_t w2_re[NUM_ELEMENTS], w2_im[NUM_ELEMENTS];
 
-    matrix_t c = 299792458;
-    matrix_t fc = 300000000;
+    std::ofstream outFile;
 
-// w是复数，分实部和虚部计算
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
-    	//float a =hls::cos(2 * M_PI * hls::sinf(M_PI/3) * 0 * c / fc)/NUM_ELEMENTS;
-    	//cout<<"a:"<<a<<endl;
-    	w2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
-        w2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
-
-    }
-
+    // 打开文件
+    outFile.open("HWoutput.dat");
     // Perform beamforming
+
+
     for (int i = 0; i < N; i++) {
         y_re[i] = 0.0;
         y_im[i] = 0.0;
  // 初始化
         for (int j = 0; j < NUM_ELEMENTS; j++) {
-            matrix_t rx_w2_re = rx_re[i] * w2_re[j] - rx_im[i] * w2_im[j]; // 实部
-            matrix_t rx_w2_im = rx_re[i] * w2_im[j] + rx_im[i] * w2_re[j]; // 虚部
-            //cout<<"rx_re:"<<rx_re[i]<<endl;
-           // cout<<"rx_im:"<<rx_im[i]<<endl;
-            //cout<<"w2_re:"<<w2_re[j]<<endl;
-           // cout<<"w2_im:"<<w2_im[j]<<endl;
-           // cout<<"rx_w2_im:"<<rx_w2_im<<endl;
+            data_psb rx_weightsRe = cov_Mat_re[i][j] * weightsRe[j] - cov_Mat_im[i][j] * weightsIm[j]; // 实部
+            data_psb rx_weightsIm = cov_Mat_re[i][j] * weightsIm[j] + cov_Mat_im[i][j] * weightsRe[j]; // 虚部
+            //cout << "rx_weightsRe:   " << rx_weightsRe[j] <<endl;
+            //cout << cov_Mat_re[i][j] << "cov_Mat_re" <<endl;
  // j从1到7：天线入射的叠加
-            y_re[i] += rx_w2_re;
-            y_im[i] += rx_w2_im;
-
+            y_re[i] += rx_weightsRe;
+            y_im[i] += rx_weightsIm;
         }
-
  // 除以7：功率归一
-        y_re[i] /= NUM_ELEMENTS;
-        y_im[i] /= NUM_ELEMENTS;
 
+    y_re[i] /= NUM_ELEMENTS;
+    y_im[i] /= NUM_ELEMENTS;
+
+        // 写入数据
+        outFile << y_re[i] << endl;
     }
+
+    // 关闭文件
+    outFile.close();
 }

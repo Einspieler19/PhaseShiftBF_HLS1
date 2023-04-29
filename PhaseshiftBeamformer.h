@@ -22,8 +22,8 @@ using namespace std;
 
 #define FLOAT_DATA // Used to select error tolerance in test program
 
-#define W_IN    48
-#define IW_IN   24
+#define W_IN    64
+#define IW_IN   32
 #define N 1001
 #define NUM_ELEMENTS 7
 
@@ -31,15 +31,23 @@ using namespace std;
 
 
 
-typedef ap_fixed<W_IN,IW_IN> data_t;
-typedef float matrix_t;
+typedef ap_fixed<W_IN,IW_IN> data_psb;
+typedef float data_tb;
+
+typedef float data_typeA;
+typedef ap_fixed<W_IN,IW_IN> data_typeB;
+
+
 
 void PhaseshiftBeamformer(
-    matrix_t rx_re[N],
-    matrix_t rx_im[N],
-    matrix_t incidentAngle,
-    matrix_t y_re[N],
-    matrix_t y_im[N]);
+		data_psb (*cov_Mat_re)[NUM_ELEMENTS],
+		data_psb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_psb steeringAngle,
+		data_psb* weightsRe,
+		data_psb* weightsIm,
+		data_psb* y_re,
+		data_psb* y_im);
+
 
 
 #endif
