@@ -1,10 +1,9 @@
-
 #include "PhaseshiftBeamformer.h"
 
 
 void PhaseshiftBeamformer(
-		data_psb (*cov_Mat_re)[NUM_ELEMENTS],
-		data_psb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_psb (*cov_Mat_re)[NUMELEMENTS],
+		data_psb (*cov_Mat_im)[NUMELEMENTS],
 		data_psb steeringAngle,
 		data_psb* weightsRe,
 		data_psb* weightsIm,
@@ -12,18 +11,18 @@ void PhaseshiftBeamformer(
 		data_psb* y_im)
 {
 
-    std::ofstream outFile;
+    //std::ofstream outFile;
 
     // 打开文件
-    outFile.open("HWoutput.dat");
+    //outFile.open("HWoutput.dat");
     // Perform beamforming
 
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SIGNALLENGTH; i++) {
         y_re[i] = 0.0;
         y_im[i] = 0.0;
  // 初始化
-        for (int j = 0; j < NUM_ELEMENTS; j++) {
+        for (int j = 0; j < NUMELEMENTS; j++) {
             data_psb rx_weightsRe = cov_Mat_re[i][j] * weightsRe[j] - cov_Mat_im[i][j] * weightsIm[j]; // 实部
             data_psb rx_weightsIm = cov_Mat_re[i][j] * weightsIm[j] + cov_Mat_im[i][j] * weightsRe[j]; // 虚部
             //cout << "rx_weightsRe:   " << rx_weightsRe[j] <<endl;
@@ -34,13 +33,13 @@ void PhaseshiftBeamformer(
         }
  // 除以7：功率归一
 
-    y_re[i] /= NUM_ELEMENTS;
-    y_im[i] /= NUM_ELEMENTS;
+    y_re[i] /= NUMELEMENTS;
+    y_im[i] /= NUMELEMENTS;
 
         // 写入数据
-        outFile << y_re[i] << endl;
+        //outFile << y_re[i] << endl;
     }
 
     // 关闭文件
-    outFile.close();
+    //outFile.close();
 }

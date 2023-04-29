@@ -1,16 +1,6 @@
-
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-#include <cmath>
 #include "PhaseshiftBeamformer.h"
 
 using namespace std;
-
-
-
-#define N 1001
-#define NUM_ELEMENTS 7
 
 
 ////////////////////////// 确定对比精度 //////////////////////////
@@ -21,14 +11,11 @@ using namespace std;
 #endif
 
 
-////////////////////////// 是否输出对比数据 //////////////////////////
-#define WINDOW_FN_DEBUG 0
-
 
 void GenerateInput(data_tb* re, data_tb* im) {
     // Generate input signal
-    data_tb t[N];
-    for (int i = 0; i < N; i++) {
+    data_tb t[SIGNALLENGTH];
+    for (int i = 0; i < SIGNALLENGTH; i++) {
         t[i] = i;
     }
 
@@ -37,9 +24,9 @@ void GenerateInput(data_tb* re, data_tb* im) {
     outFile.open("Signal.txt");
 
     data_tb fsignal = 0.01;
-    //data_tb re[N];
-    //data_tb im[N];
-    for (int i = 0; i < N; i++) {
+
+
+    for (int i = 0; i < SIGNALLENGTH; i++) {
         re[i] = sin(2 * M_PI * fmod(fsignal * t[i], 1.0));
         im[i] = 0;
         // 写入数据
@@ -54,7 +41,7 @@ void GenerateInput(data_tb* re, data_tb* im) {
 
 
 // 添加噪声函数
-void addNoise(data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELEMENTS], data_tb variance) {
+void addNoise(data_tb (*cov_Mat_re)[NUMELEMENTS], data_tb (*cov_Mat_im)[NUMELEMENTS], data_tb variance) {
     // 设置随机数种子
     srand((unsigned)time(NULL));
     double randNum_re;
@@ -62,8 +49,8 @@ void addNoise(data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELE
     ofstream FILE;
     //Save the results to a file
     FILE.open ("Noised.dat");
-    for (int i = 0; i < N; i++) {
-    	for (int j = 0; j < NUM_ELEMENTS; j++) {
+    for (int i = 0; i < SIGNALLENGTH; i++) {
+    	for (int j = 0; j < NUMELEMENTS; j++) {
     	randNum_re = (double)rand() / RAND_MAX-0.5;
     	randNum_im = (double)rand() / RAND_MAX-0.5;
     	cov_Mat_re[i][j] += sqrt(variance) * randNum_re;
@@ -75,34 +62,34 @@ void addNoise(data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELE
     FILE.close();
 }
 
-void collectWave(data_tb* rx_re, data_tb* rx_im, data_tb (*cov_Mat_re)[NUM_ELEMENTS], data_tb (*cov_Mat_im)[NUM_ELEMENTS], data_tb incidentAngle)
+void collectWave(data_tb* rx_re, data_tb* rx_im, data_tb (*cov_Mat_re)[NUMELEMENTS], data_tb (*cov_Mat_im)[NUMELEMENTS], data_tb incidentAngle)
 {
 
 	// 位置初始化
-	    data_tb Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
+	    data_tb Elementpos[NUMELEMENTS];
+	    generateElementpos<data_tb>(Elementpos);
 
 	// 权重
-	    data_tb v2_re[NUM_ELEMENTS], v2_im[NUM_ELEMENTS];
+	    data_tb v2_re[NUMELEMENTS], v2_im[NUMELEMENTS];
 
-	    data_tb c = 3e8;
-	    data_tb fc = 300e6;
 	    // 打开文件
 	    //outFile.open("Weight.txt");
 	// Position
-	    for (int i = 0; i < NUM_ELEMENTS; i++) {
-	        v2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
-	        v2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * c / fc);
+	    for (int i = 0; i < NUMELEMENTS; i++) {
+	        v2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+	        v2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
 	        // 写入数据
 	        //outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
 	    }
 
-	    for (int i = 0; i < N; i++) {
-	        for (int j = 0; j < NUM_ELEMENTS; j++) {
+	    for (int i = 0; i < SIGNALLENGTH; i++) {
+	        for (int j = 0; j < NUMELEMENTS; j++) {
 	        	cov_Mat_re[i][j] =  rx_re[i] * v2_re[j] - rx_im[i] * v2_im[j]; // 实部
 	        	cov_Mat_im[i][j] = rx_re[i] * v2_im[j] + rx_im[i] * v2_re[j]; // 虚部
 	        	}
 	    }
 }
+
 
 
 
@@ -117,17 +104,16 @@ void computeWeights(
     outFile.open("Weights.dat");
 
 	// 位置初始化
-	data_tb Elementpos[NUM_ELEMENTS] = {-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5};
-    // 权重
+    data_tb Elementpos[NUMELEMENTS];
+    generateElementpos<data_tb>(Elementpos);
 
-    data_tb c = 3e8;
-    data_tb fc = 300e6;
+    // 权重
 
     // w是复数，分实部和虚部计算
 
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
-    	weightsRe[i] = hls::cos(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
-        weightsIm[i] = hls::sin(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * c / fc);
+    for (int i = 0; i < NUMELEMENTS; i++) {
+    	weightsRe[i] = hls::cos(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+        weightsIm[i] = hls::sin(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
         // 写入数据
         outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
     }
@@ -142,14 +128,15 @@ data_typeB datatypeConverter(data_typeA data_i){
 	return data_o;
 }
 
+
 void parametersConverter(
-		data_tb (*cov_Mat_re)[NUM_ELEMENTS],
-		data_tb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_tb (*cov_Mat_re)[NUMELEMENTS],
+		data_tb (*cov_Mat_im)[NUMELEMENTS],
 		//data_tb* steeringAngle,
 		data_tb* weightsRe,
 		data_tb* weightsIm,
-		data_psb (*hw_cov_Mat_re)[NUM_ELEMENTS],
-		data_psb (*hw_cov_Mat_im)[NUM_ELEMENTS],
+		data_psb (*hw_cov_Mat_re)[NUMELEMENTS],
+		data_psb (*hw_cov_Mat_im)[NUMELEMENTS],
 		//data_psb* hw_steeringAngle,
 		data_psb* hw_weightsRe,
 		data_psb* hw_weightsIm,
@@ -158,15 +145,15 @@ void parametersConverter(
 		data_psb* hw_y_re,
 		data_psb* hw_y_im){
 
-	for (int i = 0; i < N; i++) {
+	for (int i = 0; i < SIGNALLENGTH; i++) {
 		hw_y_re[i] = datatypeConverter(y_re[i]);
 		hw_y_im[i] = datatypeConverter(y_im[i]);
-	        for (int j = 0; j < NUM_ELEMENTS; j++) {
+	        for (int j = 0; j < NUMELEMENTS; j++) {
 	        	hw_cov_Mat_re[i][j] = datatypeConverter(cov_Mat_re[i][j]);
 	        	hw_cov_Mat_im[i][j] = datatypeConverter(cov_Mat_im[i][j]);
 	        }
 	}
-	for (int j = 0; j < NUM_ELEMENTS; j++) {
+	for (int j = 0; j < NUMELEMENTS; j++) {
 	hw_weightsRe[j] = datatypeConverter(weightsRe[j]);
 	hw_weightsIm[j] = datatypeConverter(weightsIm[j]);
 
@@ -180,8 +167,8 @@ void parametersConverter(
 
 
 void SW_PhaseshiftBeamformer(
-		data_tb (*cov_Mat_re)[NUM_ELEMENTS],
-		data_tb (*cov_Mat_im)[NUM_ELEMENTS],
+		data_tb (*cov_Mat_re)[NUMELEMENTS],
+		data_tb (*cov_Mat_im)[NUMELEMENTS],
 		data_tb steeringAngle,
 		data_tb* weightsRe,
 		data_tb* weightsIm,
@@ -196,11 +183,11 @@ void SW_PhaseshiftBeamformer(
     // Perform beamforming
 
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SIGNALLENGTH; i++) {
         y_re[i] = 0.0;
         y_im[i] = 0.0;
  // 初始化
-        for (int j = 0; j < NUM_ELEMENTS; j++) {
+        for (int j = 0; j < NUMELEMENTS; j++) {
             data_tb rx_weightsRe = cov_Mat_re[i][j] * weightsRe[j] - cov_Mat_im[i][j] * weightsIm[j]; // 实部
             data_tb rx_weightsIm = cov_Mat_re[i][j] * weightsIm[j] + cov_Mat_im[i][j] * weightsRe[j]; // 虚部
             //cout << rx_weightsRe << "rx_weightsRe" <<endl;
@@ -210,8 +197,8 @@ void SW_PhaseshiftBeamformer(
         }
  // 除以7：功率归一
 
-    y_re[i] /= NUM_ELEMENTS;
-    y_im[i] /= NUM_ELEMENTS;
+    y_re[i] /= NUMELEMENTS;
+    y_im[i] /= NUMELEMENTS;
 
         // 写入数据
         outFile << y_re[i] << endl;
@@ -228,25 +215,25 @@ int main()
 {
 
     // Initialize input
-    data_tb rx_re[N], rx_im[N];
-    data_psb hw_rx_re[N], hw_rx_im[N];
+    data_tb rx_re[SIGNALLENGTH], rx_im[SIGNALLENGTH];
+    data_psb hw_rx_re[SIGNALLENGTH], hw_rx_im[SIGNALLENGTH];
 
 
-    data_tb cov_Mat_re[N][NUM_ELEMENTS], cov_Mat_im[N][NUM_ELEMENTS];
-    data_psb hw_cov_Mat_re[N][NUM_ELEMENTS], hw_cov_Mat_im[N][NUM_ELEMENTS];
+    data_tb cov_Mat_re[SIGNALLENGTH][NUMELEMENTS], cov_Mat_im[SIGNALLENGTH][NUMELEMENTS];
+    data_psb hw_cov_Mat_re[SIGNALLENGTH][NUMELEMENTS], hw_cov_Mat_im[SIGNALLENGTH][NUMELEMENTS];
 
 
     // Set incident angle
-    data_tb incidentAngle = M_PI/3;
-    data_tb steeringAngle = -M_PI/3;
-    data_psb hw_steeringAngle = -M_PI/3;
-    data_tb variance = 1;
-    data_tb weightsRe[NUM_ELEMENTS], weightsIm[NUM_ELEMENTS];
-    data_psb hw_weightsRe[NUM_ELEMENTS], hw_weightsIm[NUM_ELEMENTS];
+    data_tb incidentAngle = DOANGLE;
+    data_tb steeringAngle = STEERINGANGLE;
+    data_psb hw_steeringAngle = STEERINGANGLE;
+    data_tb variance = NOISEVARIANCE;
+    data_tb weightsRe[NUMELEMENTS], weightsIm[NUMELEMENTS];
+    data_psb hw_weightsRe[NUMELEMENTS], hw_weightsIm[NUMELEMENTS];
 
     // Initialize output
-    data_psb hw_result_re[N], hw_result_im[N];
-    data_tb sw_result_re[N], sw_result_im[N];
+    data_psb hw_result_re[SIGNALLENGTH], hw_result_im[SIGNALLENGTH];
+    data_tb sw_result_re[SIGNALLENGTH], sw_result_im[SIGNALLENGTH];
 
 
 	GenerateInput(rx_re, rx_im);
@@ -290,7 +277,7 @@ int main()
    cout << fixed << setprecision(5);
 
 //循环求差
-   for (unsigned i = 0; i < N; i++) {
+   for (unsigned i = 0; i < SIGNALLENGTH; i++) {
       data_tb abs_err_re = (data_tb)hw_result_re[i] - (data_tb)sw_result_re[i];
       data_tb abs_err_im = (data_tb)hw_result_im[i] - (data_tb)sw_result_im[i];
 
