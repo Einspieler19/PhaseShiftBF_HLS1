@@ -1,23 +1,34 @@
 #include "PhaseshiftBeamformer.h"
 
 
-void PhaseshiftBeamformer(
-		data_psb (*cov_Mat_re)[NUMELEMENTS],
-		data_psb (*cov_Mat_im)[NUMELEMENTS],
-		data_psb steeringAngle,
-		data_psb* weightsRe,
-		data_psb* weightsIm,
-		data_psb* y_re,
-		data_psb* y_im)
-{
+void PhaseshiftBeamformer(){
+	data_psb cov_Mat_re[SIGNALLENGTH][NUMELEMENTS], cov_Mat_im[SIGNALLENGTH][NUMELEMENTS];
+	data_psb weightsRe[NUMELEMENTS],weightsIm[NUMELEMENTS];
+	data_psb y_re[SIGNALLENGTH],y_im[SIGNALLENGTH];
 
-    //std::ofstream outFile;
+	std::ifstream inFile;
+	// 打开文件
+	inFile.open("Noised.dat");
+	for (int i = 0; i < SIGNALLENGTH; i++) {
+	            for (int j = 0; j < NUMELEMENTS; j++) {
+	            	inFile >> cov_Mat_re[i][j];
+	            	inFile >> cov_Mat_im[i][j];
+	            }
+	    }
+	inFile.close();
 
+
+	// 打开文件
+	inFile.open("Weights.dat");
+	for (int j = 0; j < NUMELEMENTS; j++) {
+		inFile >> weightsRe[j];
+		inFile >> weightsIm[j];
+	    }
+	inFile.close();
+
+    std::ofstream outFile;
     // 打开文件
-    //outFile.open("HWoutput.dat");
-    // Perform beamforming
-
-
+    outFile.open("HWout.dat");
     for (int i = 0; i < SIGNALLENGTH; i++) {
         y_re[i] = 0.0;
         y_im[i] = 0.0;
@@ -35,11 +46,11 @@ void PhaseshiftBeamformer(
 
     y_re[i] /= NUMELEMENTS;
     y_im[i] /= NUMELEMENTS;
-
-        // 写入数据
-        //outFile << y_re[i] << endl;
+    // 写入数据
+    outFile << y_re[i] << endl;
+    outFile << y_im[i] << endl;
     }
 
     // 关闭文件
-    //outFile.close();
+    outFile.close();
 }

@@ -53,10 +53,14 @@ void addNoise(data_tb (*cov_Mat_re)[NUMELEMENTS], data_tb (*cov_Mat_im)[NUMELEME
     	for (int j = 0; j < NUMELEMENTS; j++) {
     	randNum_re = (double)rand() / RAND_MAX-0.5;
     	randNum_im = (double)rand() / RAND_MAX-0.5;
+    	//cout << "Before: " << cov_Mat_re[i][j] << endl;
     	cov_Mat_re[i][j] += sqrt(variance) * randNum_re;
     	cov_Mat_im[i][j] += sqrt(variance) * randNum_im;
+    	//cout << "After: " << cov_Mat_re[i][j] << endl;
+    	FILE << cov_Mat_re[i][j] << endl;
+    	FILE << cov_Mat_im[i][j] << endl;
     	}
-    	FILE << cov_Mat_re[i][1] << endl;
+    	//FILE << cov_Mat_re[i][1] << endl;
 
     	}
     FILE.close();
@@ -64,30 +68,35 @@ void addNoise(data_tb (*cov_Mat_re)[NUMELEMENTS], data_tb (*cov_Mat_im)[NUMELEME
 
 void collectWave(data_tb* rx_re, data_tb* rx_im, data_tb (*cov_Mat_re)[NUMELEMENTS], data_tb (*cov_Mat_im)[NUMELEMENTS], data_tb incidentAngle)
 {
-
 	// 位置初始化
-	    data_tb Elementpos[NUMELEMENTS];
-	    generateElementpos<data_tb>(Elementpos);
+	data_tb Elementpos[NUMELEMENTS];
+	generateElementpos<data_tb>(Elementpos);
 
 	// 权重
-	    data_tb v2_re[NUMELEMENTS], v2_im[NUMELEMENTS];
+	data_tb v2_re[NUMELEMENTS], v2_im[NUMELEMENTS];
 
-	    // 打开文件
-	    //outFile.open("Weight.txt");
+    std::ofstream outFile;
+    // 打开文件
+	outFile.open("COVMAT.dat");
 	// Position
-	    for (int i = 0; i < NUMELEMENTS; i++) {
-	        v2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
-	        v2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
-	        // 写入数据
-	        //outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
-	    }
-
-	    for (int i = 0; i < SIGNALLENGTH; i++) {
-	        for (int j = 0; j < NUMELEMENTS; j++) {
-	        	cov_Mat_re[i][j] =  rx_re[i] * v2_re[j] - rx_im[i] * v2_im[j]; // 实部
-	        	cov_Mat_im[i][j] = rx_re[i] * v2_im[j] + rx_im[i] * v2_re[j]; // 虚部
-	        	}
-	    }
+	for (int i = 0; i < NUMELEMENTS; i++) {
+		        v2_re[i] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+		        v2_im[i] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+		        // 写入数据
+		        //outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
+		        }
+	for (int i = 0; i < SIGNALLENGTH; i++) {
+		        for (int j = 0; j < NUMELEMENTS; j++) {
+		        	cov_Mat_re[i][j] = rx_re[i] * v2_re[j] - rx_im[i] * v2_im[j]; // 实部
+		        	cov_Mat_im[i][j] = rx_re[i] * v2_im[j] + rx_im[i] * v2_re[j]; // 虚部
+		        	outFile << cov_Mat_re[i][j] <<  endl;
+		        	outFile << cov_Mat_im[i][j] <<  endl;
+	            	//cout << "InRE: "<< cov_Mat_re[i][j] << endl;
+	            	//cout << "InIM: "<< cov_Mat_im[i][j] << endl;
+		        }
+	}
+    // 关闭文件
+    outFile.close();
 }
 
 
@@ -115,7 +124,8 @@ void computeWeights(
     	weightsRe[i] = hls::cos(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
         weightsIm[i] = hls::sin(2 * M_PI * hls::sinf(steeringAngle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
         // 写入数据
-        outFile << weightsRe[i] << weightsIm[i] << "i" << i <<  endl;
+        outFile << weightsRe[i] <<  endl;
+        outFile << weightsIm[i] <<  endl;
     }
 
     // 关闭文件
@@ -179,7 +189,7 @@ void SW_PhaseshiftBeamformer(
     std::ofstream outFile;
 
     // 打开文件
-    outFile.open("SWoutput.dat");
+    outFile.open("SWout.dat");
     // Perform beamforming
 
 
@@ -202,13 +212,12 @@ void SW_PhaseshiftBeamformer(
 
         // 写入数据
         outFile << y_re[i] << endl;
+        outFile << y_im[i] << endl;
     }
 
     // 关闭文件
     outFile.close();
 }
-
-
 
 
 int main()
@@ -244,70 +253,70 @@ int main()
 
 	computeWeights(steeringAngle, weightsRe, weightsIm);
 
+
+
     // Call beamforming SW function
     SW_PhaseshiftBeamformer(cov_Mat_re, cov_Mat_im, steeringAngle, weightsRe, weightsIm, sw_result_re, sw_result_im);
 
-    parametersConverter(
-    		cov_Mat_re,
-    		cov_Mat_im,
-     		weightsRe,
-    		weightsIm,
-    		hw_cov_Mat_re,
-    		hw_cov_Mat_im,
-    		hw_weightsRe,
-    		hw_weightsIm,
-			rx_re,
-			rx_im,
-			hw_rx_re,
-			hw_rx_im
-			);
-
-
-    //PhaseshiftBeamformer(hw_cov_Mat_re, hw_cov_Mat_im, hw_steeringAngle, hw_weightsRe, hw_weightsIm, hw_sw_result_re, hw_sw_result_im);
-
     // Call DUT
-    PhaseshiftBeamformer(hw_cov_Mat_re, hw_cov_Mat_im, hw_steeringAngle, hw_weightsRe, hw_weightsIm, hw_result_re, hw_result_im);
+    PhaseshiftBeamformer();
+
+    //PhaseshiftBeamformer(hw_cov_Mat_re, hw_cov_Mat_im, hw_steeringAngle, hw_weightsRe, hw_weightsIm, hw_result_re, hw_result_im);
+
+
+	std::ifstream inFile;
+	// 打开文件
+	inFile.open("HWout.dat");
+
+    for (unsigned i = 0; i < SIGNALLENGTH; i++) {
+ 	   // 写入数据
+    	inFile >> hw_result_re[i];
+    	inFile >> hw_result_im[i];
+    }
+    // 关闭文件
+    inFile.close();
+
+
+
+
+
+
+
+
 
 ////////////////////////// 结果对比 //////////////////////////
 	unsigned err_cnt = 0;
 	
-	
-//检查精度
+	//检查精度
    cout << "Checking results against a tolerance of " << ABS_ERR_THRESH << endl;
    cout << fixed << setprecision(5);
 
-//循环求差
+   //循环求差
    for (unsigned i = 0; i < SIGNALLENGTH; i++) {
-      data_tb abs_err_re = (data_tb)hw_result_re[i] - (data_tb)sw_result_re[i];
-      data_tb abs_err_im = (data_tb)hw_result_im[i] - (data_tb)sw_result_im[i];
-
-
-////////////////////////// 输出每组差值 //////////////////////////
-#if WINDOW_FN_DEBUG
-      cout << "i = " << i << "\thw_result = " << hw_result_re[i] << " + j " << hw_result_im[i];
-      cout << "\t sw_result = " << sw_result_re[i] << " + j " << sw_result_im[i] << endl;
-#endif
-
-////////////////////////// 超阈值报错 //////////////////////////
-
-   if ((fabs(abs_err_re) > ABS_ERR_THRESH)|(fabs(abs_err_im) > ABS_ERR_THRESH)) {
-         cout << "Error threshold exceeded: i = " << i;
-         cout << "  Expected: "  << sw_result_re[i] << " + j " << sw_result_im[i];
-         cout << "  Got: "  << hw_result_re[i] << " + j " << hw_result_im[i];
-         cout << "  Delta: " << abs_err_re << " + j " << abs_err_im << endl;
-         err_cnt++;
-         cout << endl;
-      }
-
-   }
-
+	   data_tb abs_err_re = (data_tb)hw_result_re[i] - (data_tb)sw_result_re[i];
+	   data_tb abs_err_im = (data_tb)hw_result_im[i] - (data_tb)sw_result_im[i];
+	   ////////////////////////// 输出每组差值 //////////////////////////
+	   #if WINDOW_FN_DEBUG
+	   cout << "i = " << i << "\thw_result = " << hw_result_re[i] << " + j " << hw_result_im[i];
+	   cout << "\t sw_result = " << sw_result_re[i] << " + j " << sw_result_im[i] << endl;
+	   #endif
+	   ////////////////////////// 超阈值报错 //////////////////////////
+	   if ((fabs(abs_err_re) > ABS_ERR_THRESH)|(fabs(abs_err_im) > ABS_ERR_THRESH)) {
+	            cout << "Error threshold exceeded: i = " << i;
+	            cout << "  Expected: "  << sw_result_re[i] << " + j " << sw_result_im[i];
+	            cout << "  Got: "  << hw_result_re[i] << " + j " << hw_result_im[i];
+	            cout << "  Delta: " << abs_err_re << " + j " << abs_err_im << endl;
+	            err_cnt++;
+	            cout << endl;
+	         }
+   	   }
    if (err_cnt) {
-      cout << "!!! TEST FAILED - " << err_cnt;
-      cout << " results out of tolerance." << endl;
+	   cout << "!!! TEST FAILED - " << err_cnt;
+	   cout << " results out of tolerance." << endl;
    } else
-      cout << "Test Passed" << endl;
+	   cout << "Test Passed" << endl;
 
-   // Only return 0 on success
-   return err_cnt;
+      // Only return 0 on success
+      return err_cnt;
 }
 

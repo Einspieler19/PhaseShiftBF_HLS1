@@ -3,13 +3,13 @@
 # Project settings
 
 # Create a project
-open_project	-reset PhaseShiftBeamformer_prj
+open_project	-reset PhaseshiftBeamformer_prj
 
 # The source file and test bench
-add_files			PhaseShiftBeamformer.cpp
+add_files			PhaseshiftBeamformer.cpp
 add_files -tb			PhaseshiftBeamformer_test.cpp
 # Specify the top-level function for synthesis
-set_top				PhaseShiftBeamformer
+set_top				PhaseshiftBeamformer
 
 ###########################
 # Solution settings

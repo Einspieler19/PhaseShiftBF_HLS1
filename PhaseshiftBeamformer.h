@@ -13,6 +13,8 @@
 #include <ap_int.h>     // Xilinx hls的整型库
 #include <ap_fixed.h>
 
+
+#include <hls_stream.h>
 #include <hls_math.h>
 
 
@@ -33,14 +35,8 @@ typedef ap_fixed<W_IN,IW_IN> data_typeB;
 
 
 
-void PhaseshiftBeamformer(
-		data_psb (*cov_Mat_re)[NUMELEMENTS],
-		data_psb (*cov_Mat_im)[NUMELEMENTS],
-		data_psb steeringAngle,
-		data_psb* weightsRe,
-		data_psb* weightsIm,
-		data_psb* y_re,
-		data_psb* y_im);
+
+void PhaseshiftBeamformer();
 
 
 
