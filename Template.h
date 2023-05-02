@@ -3,6 +3,20 @@
 
 #include "constants.h"
 
+template<typename type_data>
+struct my_complex_Value{
+type_data re;
+type_data im;
+};
+
+template<typename type_data, int N>
+struct my_complex_Array{
+type_data re[N];
+type_data im[N];
+};
+
+
+
 template<typename type_pos>
 void generateElementpos(type_pos* Elementpos){
 	Elementpos[0] = (NUMELEMENTS - 1) / 2 * ELEMENTSPACING;
@@ -17,6 +31,28 @@ type_dout datatypeConverter(type_din data_i){
 	type_dout data_o = (type_dout)data_i;
 	return data_o;
 }
+
+template<typename type_din, typename type_dout>
+my_complex_Value<type_dout> complexdataConverter(type_din data_i_re, type_din data_i_im){
+    my_complex_Value<type_dout> data_o;
+    data_o.re = datatypeConverter<type_din, type_dout>(data_i_re);
+    data_o.im = datatypeConverter<type_din, type_dout>(data_i_im);
+    return data_o;
+}
+
+
+template<typename type_din, typename type_dout, int N>
+my_complex_Array<type_dout, N> complexarrayConverter(type_din data_i_re[N], type_din data_i_im[N]){
+    my_complex_Array<type_dout, N> data_o;
+for (int j = 0; j < N; j++) {
+    data_o.re[j] = datatypeConverter<type_din, type_dout>(data_i_re[j]);
+    data_o.im[j] = datatypeConverter<type_din, type_dout>(data_i_im[j]);
+}
+    return data_o;
+}
+
+
+
 
 
 

@@ -31,13 +31,9 @@ typedef float data_typeA;
 typedef float data_typeB;
 //typedef ap_fixed<W_IN,IW_IN> data_typeB;
 
-struct my_Output{
-data_psb a;
-data_psb b;
-};
 
 
-my_Output PhaseshiftBeamformer(
+my_complex_Value<data_psb> PhaseshiftBeamformer(
 		data_psb cov_Mat_re[NUMELEMENTS],
 		data_psb cov_Mat_im[NUMELEMENTS],
 		data_psb weightsRe[NUMELEMENTS],
