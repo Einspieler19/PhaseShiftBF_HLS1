@@ -9,6 +9,7 @@
 #include <cmath>
 #include <ctime>
 #include <cstdlib>
+#include <random>
 
 #include <ap_int.h>     // Xilinx hls的整型库
 #include <ap_fixed.h>

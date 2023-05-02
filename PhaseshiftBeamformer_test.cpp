@@ -30,31 +30,34 @@ void GenerateInput(data_tb* re, data_tb* im) {
     outFile.close();
 }
 
-
 // 添加噪声函数
-void addNoise(
-		data_tb cov_Mat_re[NUMELEMENTS],
-		data_tb cov_Mat_im[NUMELEMENTS],
+my_complex_Array<data_tb, NUMELEMENTS> addNoise(
+		data_tb collected_re[NUMELEMENTS],
+		data_tb collected_im[NUMELEMENTS],
 		data_tb variance)
 {
-
-    // 设置随机数种子
-    srand((unsigned)time(NULL));
-    double randNum_re;
-    double randNum_im;
+	my_complex_Array<data_tb, NUMELEMENTS> result;
+	// 定义随机数引擎和分布
+	std::random_device rd;  // 用于生成随机种子
+	std::mt19937 gen(rd()); // 随机数引擎
+	std::uniform_real_distribution<double> dis(0.0, 1.0); // 生成 [0.0, 1.0) 范围内的随机浮点数
 
     ofstream FILE;
     //Save the results to a file
     FILE.open ("Noised.dat");
+    for (int j = 0; j < NUMELEMENTS; j++) {
+    	data_tb randNum_re = (data_tb)dis(gen);
+    	data_tb randNum_im = (data_tb)dis(gen);
 
-    	for (int j = 0; j < NUMELEMENTS; j++) {
-    	randNum_re = (double)rand() / RAND_MAX-0.5;
-    	randNum_im = (double)rand() / RAND_MAX-0.5;
-    	cov_Mat_re[j] += sqrt(variance) * randNum_re;
-    	cov_Mat_im[j] += sqrt(variance) * randNum_im;
-    	}
+    	result.re[j] = collected_re[j] + sqrt(variance) * randNum_re;
+    	result.im[j] = collected_im[j] + sqrt(variance) * randNum_im;
+
+    	FILE<<result.im[j]<<endl;
+
+    }
+    FILE.close();
+    return result;
 }
-
 
 my_complex_Array<data_tb, NUMELEMENTS> collectWave(
 		data_tb rx_re,
@@ -84,9 +87,6 @@ my_complex_Array<data_tb, NUMELEMENTS> collectWave(
 	    return result;
 }
 
-
-
-
 void computeWeights(
 		data_tb steeringAngle,
 		data_tb* weightsRe,
@@ -113,44 +113,6 @@ void computeWeights(
     outFile.close();
 
 }
-
-
-data_typeB datatypeConverter(data_typeA data_i){
-	data_typeB data_o = data_typeB(data_i);
-	return data_o;
-}
-
-
-void parametersConverter(
-		data_tb (*cov_Mat_re)[NUMELEMENTS],
-		data_tb (*cov_Mat_im)[NUMELEMENTS],
-		//data_tb* steeringAngle,
-		data_tb* weightsRe,
-		data_tb* weightsIm,
-		data_psb (*hw_cov_Mat_re)[NUMELEMENTS],
-		data_psb (*hw_cov_Mat_im)[NUMELEMENTS],
-		//data_psb* hw_steeringAngle,
-		data_psb* hw_weightsRe,
-		data_psb* hw_weightsIm,
-		data_tb* y_re,
-		data_tb* y_im,
-		data_psb* hw_y_re,
-		data_psb* hw_y_im){
-
-	for (int i = 0; i < SIGNALLENGTH; i++) {
-		hw_y_re[i] = datatypeConverter(y_re[i]);
-		hw_y_im[i] = datatypeConverter(y_im[i]);
-	        for (int j = 0; j < NUMELEMENTS; j++) {
-	        	hw_cov_Mat_re[i][j] = datatypeConverter(cov_Mat_re[i][j]);
-	        	hw_cov_Mat_im[i][j] = datatypeConverter(cov_Mat_im[i][j]);
-	        }
-	}
-	for (int j = 0; j < NUMELEMENTS; j++) {
-	hw_weightsRe[j] = datatypeConverter(weightsRe[j]);
-	hw_weightsIm[j] = datatypeConverter(weightsIm[j]);
-	}
-}
-
 
 
 my_complex_Value<data_tb> SW_PhaseshiftBeamformer(
@@ -181,107 +143,72 @@ my_complex_Value<data_tb> SW_PhaseshiftBeamformer(
     return result;
 }
 
-
 int main()
 {
+    // Set Consts
+    data_tb incidentAngle = DOANGLE;
+    data_tb steeringAngle = STEERINGANGLE;
+    data_tb variance = NOISEVARIANCE;
 
     // Initialize input
     data_tb rx_re[SIGNALLENGTH], rx_im[SIGNALLENGTH];
-    data_psb hw_rx_re[SIGNALLENGTH], hw_rx_im[SIGNALLENGTH];
-
-
     data_tb all_cov_Mat_re[SIGNALLENGTH][NUMELEMENTS], all_cov_Mat_im[SIGNALLENGTH][NUMELEMENTS];
-    //data_psb hw_cov_Mat_re[SIGNALLENGTH][NUMELEMENTS], hw_cov_Mat_im[SIGNALLENGTH][NUMELEMENTS];
-
-
-    // Set incident angle
-    data_tb incidentAngle = DOANGLE;
-    data_tb steeringAngle = STEERINGANGLE;
-    data_psb hw_steeringAngle = STEERINGANGLE;
-    data_tb variance = NOISEVARIANCE;
 
     data_tb weightsRe[NUMELEMENTS], weightsIm[NUMELEMENTS];
     data_psb hw_weightsRe[NUMELEMENTS], hw_weightsIm[NUMELEMENTS];
 
     // Initialize output
-
     data_tb sw_result_re[SIGNALLENGTH], sw_result_im[SIGNALLENGTH];
     data_psb hw_result_re[SIGNALLENGTH], hw_result_im[SIGNALLENGTH];
-
-    data_tb in_sw_cov_Mat_re[NUMELEMENTS];
-    data_tb in_sw_cov_Mat_im[NUMELEMENTS];
-    data_psb in_hw_cov_Mat_re[NUMELEMENTS];
-    data_psb in_hw_cov_Mat_im[NUMELEMENTS];
 
     std::ofstream outFile1;
     std::ofstream outFile2;
 
 	GenerateInput(rx_re, rx_im);
 
-		//addNoise(cov_Mat_re, cov_Mat_im, variance);
-
 	computeWeights(steeringAngle, weightsRe, weightsIm);
 
     // Call beamforming SW function
 
-
-	my_complex_Array<data_psb, NUMELEMENTS> collectedWave;
-	my_complex_Value<data_psb> sw_myResult;
-	my_complex_Array<data_psb, NUMELEMENTS> hw_Weights;
 	my_complex_Array<data_psb, NUMELEMENTS> sw_covMats;
+	my_complex_Array<data_psb, NUMELEMENTS> hw_collectedWave;
+	my_complex_Array<data_psb, NUMELEMENTS> sw_collectedWave;
+	my_complex_Array<data_psb, NUMELEMENTS> hw_Weights;
+
+	my_complex_Value<data_psb> sw_myResult;
+	my_complex_Value<data_psb> hw_myResult;
 
     // 打开文件
     outFile1.open("SWoutput.dat");
     outFile2.open("HWoutput.dat");
+
     for (int i = 0; i < SIGNALLENGTH; i++) {
     	// assign
     	sw_covMats = complexarrayConverter<data_tb, data_tb, NUMELEMENTS>(all_cov_Mat_re[i], all_cov_Mat_im[i]);
 
-    	//for (int j = 0; j < NUMELEMENTS; j++) {
-        //	in_sw_cov_Mat_re[j] = all_cov_Mat_re[i][j];
-        //	in_sw_cov_Mat_im[j] = all_cov_Mat_im[i][j];
-        //}
+    	sw_collectedWave = collectWave(rx_re[i], rx_im[i], sw_covMats.re, sw_covMats.im, incidentAngle);
+    	//sw_collectedWave = addNoise(sw_collectedWave.re,sw_collectedWave.im,variance);
 
-        collectedWave = collectWave(rx_re[i], rx_im[i], sw_covMats.re, sw_covMats.im, incidentAngle);
-        // Perform beamforming
+        hw_collectedWave = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(sw_collectedWave.re, sw_collectedWave.im);
 
-        sw_myResult = SW_PhaseshiftBeamformer(collectedWave.re, collectedWave.im, weightsRe, weightsIm);
+        hw_Weights = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(weightsRe, weightsIm);
+
+        sw_myResult = SW_PhaseshiftBeamformer(sw_collectedWave.re, sw_collectedWave.im, weightsRe, weightsIm);
+        hw_myResult = PhaseshiftBeamformer(hw_collectedWave.re, hw_collectedWave.im, hw_Weights.re, hw_Weights.im);
+
 
         sw_result_re[i] = sw_myResult.re;
         sw_result_im[i] = sw_myResult.im;
 
-
-        // 写入数据
-        outFile1 << sw_result_re[i] << endl;
-
-        for (int j = 0; j < NUMELEMENTS; j++) {
-        	in_hw_cov_Mat_re[j] = datatypeConverter<data_tb, data_psb>(collectedWave.re[j]);
-        	in_hw_cov_Mat_im[j] = datatypeConverter<data_tb, data_psb>(collectedWave.im[j]);
-        }
-
-        hw_Weights = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(weightsRe, weightsIm);
-
-        //for (int j = 0; j < NUMELEMENTS; j++) {
-        	//hw_Weights = complexdataConverter<data_tb, data_psb>(weightsRe[j],weightsIm[j]);
-        	//hw_weightsRe[j] = hw_Weights.re;
-        	//hw_weightsIm[j] = hw_Weights.im;
-
-        	//hw_weightsRe[j] = datatypeConverter<data_tb, data_psb>(weightsRe[j]);
-        	//hw_weightsIm[j] = datatypeConverter<data_tb, data_psb>(weightsIm[j]);
-                //}
-
-
-       // Perform beamforming
-        my_complex_Value<data_psb> hw_myResult = PhaseshiftBeamformer(in_hw_cov_Mat_re, in_hw_cov_Mat_im, hw_Weights.re, hw_Weights.im);
         hw_result_re[i] = hw_myResult.re;
         hw_result_im[i] = hw_myResult.im;
 
         // 写入数据
+        outFile1 << sw_result_re[i] << endl;
         outFile2 << hw_result_re[i] << endl;
     }
     // 关闭文件
     outFile1.close();
-    // 关闭文件
     outFile2.close();
 
 
