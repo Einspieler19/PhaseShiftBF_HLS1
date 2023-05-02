@@ -14,7 +14,7 @@
 
 //Signal
 #define CENTERFREQ 3e8
-#define SIGNALLENGTH 1001
+#define SIGNALLENGTH 100
 #define NOISEVARIANCE 0.1
 
 
@@ -25,7 +25,7 @@
 
 //DATA
 #define W_IN    64
-#define IW_IN   32
+#define IW_IN   8
 
 //Flags
 #define FLOAT_DATA // Used to select error tolerance in test program
