@@ -22,7 +22,7 @@ void GenerateInput(data_tb* re, data_tb* im) {
     data_tb fsignal = 0.01;
     for (int i = 0; i < SIGNALLENGTH; i++) {
         re[i] = sin(2 * M_PI * fmod(fsignal * t[i], 1.0));
-        im[i] = 0;
+        im[i] = 0.0;
         // 写入数据
         outFile << re[i] << endl;
     }
@@ -30,40 +30,40 @@ void GenerateInput(data_tb* re, data_tb* im) {
     outFile.close();
 }
 
+void getNoise(data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS],data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS])
+{
+    std::ifstream noiseFile;
+    noiseFile.open("Noise.dat");
+    for (int i = 0; i < SIGNALLENGTH; i++) {
+    	for (int j = 0; j < NUMELEMENTS; j++) {
+    		noiseFile >> Noise_re[i][j];
+    		noiseFile >> Noise_im[i][j];
+    	}
+    }
+    noiseFile.close();
+}
+
+
 // 添加噪声函数
 my_complex_Array<data_tb, NUMELEMENTS> addNoise(
 		data_tb collected_re[NUMELEMENTS],
 		data_tb collected_im[NUMELEMENTS],
+		data_tb noise_re[NUMELEMENTS],
+		data_tb noise_im[NUMELEMENTS],
 		data_tb variance)
 {
 	my_complex_Array<data_tb, NUMELEMENTS> result;
-	// 定义随机数引擎和分布
-	std::random_device rd;  // 用于生成随机种子
-	std::mt19937 gen(rd()); // 随机数引擎
-	std::uniform_real_distribution<double> dis(0.0, 1.0); // 生成 [0.0, 1.0) 范围内的随机浮点数
-
-    ofstream FILE;
-    //Save the results to a file
-    FILE.open ("Noised.dat");
     for (int j = 0; j < NUMELEMENTS; j++) {
-    	data_tb randNum_re = (data_tb)dis(gen);
-    	data_tb randNum_im = (data_tb)dis(gen);
 
-    	result.re[j] = collected_re[j] + sqrt(variance) * randNum_re;
-    	result.im[j] = collected_im[j] + sqrt(variance) * randNum_im;
-
-    	FILE<<result.im[j]<<endl;
-
+    	result.re[j] = collected_re[j] + sqrt(variance) * noise_re[j] ;
+    	result.im[j] = collected_im[j] + sqrt(variance) * noise_im[j] ;
     }
-    FILE.close();
     return result;
 }
 
 my_complex_Array<data_tb, NUMELEMENTS> collectWave(
 		data_tb rx_re,
 		data_tb rx_im,
-		data_tb cov_Mat_re[NUMELEMENTS],
-		data_tb cov_Mat_im[NUMELEMENTS],
 		data_tb incidentAngle)
 {
 
@@ -71,18 +71,16 @@ my_complex_Array<data_tb, NUMELEMENTS> collectWave(
 	    data_tb Elementpos[NUMELEMENTS];
 	    generateElementpos<data_tb>(Elementpos);
 
-	// 权重
+
 	    data_tb v2_re[NUMELEMENTS], v2_im[NUMELEMENTS];
 	    my_complex_Array<data_tb, NUMELEMENTS> result;
 	    for (int j = 0; j < NUMELEMENTS; j++) {
 	    	v2_re[j] = hls::cos(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[j] * SPEEDOFLIGHT / CENTERFREQ);
 	    	v2_im[j] = hls::sin(2 * M_PI * hls::sinf(incidentAngle) * Elementpos[j] * SPEEDOFLIGHT / CENTERFREQ);
 
-	    	cov_Mat_re[j] = rx_re * v2_re[j] - rx_im * v2_im[j]; // 实部
-	    	cov_Mat_im[j] = rx_re * v2_im[j] + rx_im * v2_re[j]; // 虚部
+	    	result.re[j] = rx_re * v2_re[j] - rx_im * v2_im[j]; // 实部
+	    	result.im[j] = rx_re * v2_im[j] + rx_im * v2_re[j]; // 虚部
 
-	    	result.re[j] = cov_Mat_re[j];
-	    	result.im[j] = cov_Mat_im[j];
 	    	        	}
 	    return result;
 }
@@ -168,15 +166,19 @@ int main()
 
 	computeWeights(steeringAngle, weightsRe, weightsIm);
 
-    // Call beamforming SW function
-
-	my_complex_Array<data_psb, NUMELEMENTS> sw_covMats;
+	my_complex_Array<data_tb, NUMELEMENTS> sw_covMats;
 	my_complex_Array<data_psb, NUMELEMENTS> hw_collectedWave;
-	my_complex_Array<data_psb, NUMELEMENTS> sw_collectedWave;
+	my_complex_Array<data_tb, NUMELEMENTS> sw_collectedWave;
 	my_complex_Array<data_psb, NUMELEMENTS> hw_Weights;
 
-	my_complex_Value<data_psb> sw_myResult;
+	my_complex_Value<data_tb> sw_myResult;
 	my_complex_Value<data_psb> hw_myResult;
+
+	data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS];
+	data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS];
+	my_complex_Array<data_tb, NUMELEMENTS> array_Noise;
+
+	getNoise(Noise_re,Noise_im);
 
     // 打开文件
     outFile1.open("SWoutput.dat");
@@ -186,8 +188,10 @@ int main()
     	// assign
     	sw_covMats = complexarrayConverter<data_tb, data_tb, NUMELEMENTS>(all_cov_Mat_re[i], all_cov_Mat_im[i]);
 
-    	sw_collectedWave = collectWave(rx_re[i], rx_im[i], sw_covMats.re, sw_covMats.im, incidentAngle);
-    	//sw_collectedWave = addNoise(sw_collectedWave.re,sw_collectedWave.im,variance);
+    	sw_collectedWave = collectWave(rx_re[i], rx_im[i], incidentAngle);
+
+    	array_Noise = complexarrayConverter<data_tb, data_tb, NUMELEMENTS>(Noise_re[i], Noise_im[i]);
+    	sw_collectedWave = addNoise(sw_collectedWave.re,sw_collectedWave.im, array_Noise.re, array_Noise.im, variance);
 
         hw_collectedWave = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(sw_collectedWave.re, sw_collectedWave.im);
 
@@ -204,8 +208,10 @@ int main()
         hw_result_im[i] = hw_myResult.im;
 
         // 写入数据
-        outFile1 << sw_result_re[i] << endl;
-        outFile2 << hw_result_re[i] << endl;
+        outFile1 << sw_result_im[i] << endl;
+        outFile2 << hw_result_im[i] << endl;
+        cout << hw_result_im[i] << endl;
+
     }
     // 关闭文件
     outFile1.close();
@@ -218,7 +224,8 @@ int main()
 
 //检查精度
    cout << "Checking results against a tolerance of " << ABS_ERR_THRESH << endl;
-   cout << fixed << setprecision(5);
+   cout << fixed <<
+		   setprecision(5);
    //循环求差
    for (unsigned i = 0; i < SIGNALLENGTH; i++) {
       data_tb abs_err_re = (data_tb)hw_result_re[i] - sw_result_re[i];

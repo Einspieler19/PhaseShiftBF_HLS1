@@ -1,7 +1,9 @@
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
 
+#include <cstdlib>
 #include "constants.h"
+
 
 template<typename type_data>
 struct my_complex_Value{
@@ -28,7 +30,13 @@ void generateElementpos(type_pos* Elementpos){
 
 template<typename type_din, typename type_dout>
 type_dout datatypeConverter(type_din data_i){
-	type_dout data_o = (type_dout)data_i;
+	type_dout data_o= 0.0;
+	if ((data_i > 1.0e-9)|(data_i < -1.0e-9)){
+		data_o = (type_dout)data_i;
+	}
+	//else{
+	//	std::cout<<"no"<< data_i << std::endl;
+	//}
 	return data_o;
 }
 

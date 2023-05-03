@@ -24,12 +24,10 @@ using namespace std;
 
 
 
-typedef float data_psb;
-//typedef ap_fixed<W_IN,IW_IN> data_psb;
+//typedef float data_psb;
+typedef ap_fixed<W_IN,IW_IN> data_psb;
 typedef float data_tb;
 
-typedef float data_typeA;
-typedef float data_typeB;
 //typedef ap_fixed<W_IN,IW_IN> data_typeB;
 
 

@@ -13,7 +13,7 @@ my_complex_Value<data_psb> PhaseshiftBeamformer(
 	data_psb sum_re = 0.0;
 	data_psb sum_im = 0.0;;
 
-	for (int j = 0; j < NUMELEMENTS; j++) {
+	PhaseshiftBeamformer_label1:for (int j = 0; j < NUMELEMENTS; j++) {
 		data_psb a = cov_Mat_re[j] * weightsRe[j];
 		data_psb b = cov_Mat_im[j] * weightsIm[j];
 		data_psb c = cov_Mat_re[j] * weightsIm[j];
