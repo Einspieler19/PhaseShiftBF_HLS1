@@ -10,16 +10,17 @@ using namespace std;
 #define ABS_ERR_THRESH 0.001
 #endif
 
-void GenerateInput(data_tb* re, data_tb* im) {
+void generateInput(data_tb* re, data_tb* im) {
     // Generate input signal
     data_tb t[SIGNALLENGTH];
     for (int i = 0; i < SIGNALLENGTH; i++) {
         t[i] = i;
     }
+
     std::ofstream outFile;
     // 打开文件
     outFile.open("Signal.txt");
-    data_tb fsignal = 0.01;
+    data_tb fsignal = MYSAMPLERATE_PERSAMPLE;
     for (int i = 0; i < SIGNALLENGTH; i++) {
         re[i] = sin(2 * M_PI * fmod(fsignal * t[i], 1.0));
         im[i] = 0.0;
@@ -30,10 +31,10 @@ void GenerateInput(data_tb* re, data_tb* im) {
     outFile.close();
 }
 
-void getNoise(data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS],data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS])
+void getNoisedata(data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS],data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS])
 {
     std::ifstream noiseFile;
-    noiseFile.open("Noise.dat");
+    noiseFile.open("/home/dian/ModelComposer/MyProject/HLS_Trials/PhaseshiftBeamformer/PhaseshiftBeamformer_prj/Noise.dat");
     for (int i = 0; i < SIGNALLENGTH; i++) {
     	for (int j = 0; j < NUMELEMENTS; j++) {
     		noiseFile >> Noise_re[i][j];
@@ -80,7 +81,6 @@ my_complex_Array<data_tb, NUMELEMENTS> collectWave(
 
 	    	result.re[j] = rx_re * v2_re[j] - rx_im * v2_im[j]; // 实部
 	    	result.im[j] = rx_re * v2_im[j] + rx_im * v2_re[j]; // 虚部
-
 	    	        	}
 	    return result;
 }
@@ -113,11 +113,13 @@ void computeWeights(
 }
 
 
-my_complex_Value<data_tb> SW_PhaseshiftBeamformer(
+void SW_PhaseshiftBeamformer(
 		data_tb cov_Mat_re[NUMELEMENTS],
 		data_tb cov_Mat_im[NUMELEMENTS],
 		data_tb weightsRe[NUMELEMENTS],
-		data_tb weightsIm[NUMELEMENTS])
+		data_tb weightsIm[NUMELEMENTS],
+		data_tb *outRe,
+		data_tb *outIm)
 {
 	data_tb sum_re = 0.0;
 	data_tb sum_im = 0.0;
@@ -135,10 +137,8 @@ my_complex_Value<data_tb> SW_PhaseshiftBeamformer(
     sum_re /= NUMELEMENTS;
     sum_im /= NUMELEMENTS;
 
-    my_complex_Value<data_tb> result;
-    result.re = sum_re;
-    result.im = sum_im;
-    return result;
+    *outRe = sum_re;
+    *outIm = sum_im;
 }
 
 int main()
@@ -162,23 +162,50 @@ int main()
     std::ofstream outFile1;
     std::ofstream outFile2;
 
-	GenerateInput(rx_re, rx_im);
+    my_complex_Array<data_tb, NUMELEMENTS> sw_covMats;
+    my_complex_Array<data_psb, NUMELEMENTS> hw_collectedWave;
+    my_complex_Array<data_tb, NUMELEMENTS> sw_collectedWave;
+    my_complex_Array<data_psb, NUMELEMENTS> hw_Weights;
+
+    my_complex_Value<data_tb> sw_myResult;
+    my_complex_Value<data_psb> hw_myResult;
+
+    data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS];
+    data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS];
+    my_complex_Array<data_tb, NUMELEMENTS> array_Noise;
+
+
+    for(int i = 0; i < SIGNALLENGTH;i++){
+    	rx_re[i]=0.0;
+    	rx_im[i]=0.0;
+
+    	// Initialize output
+    	sw_result_re[i]=0.0;
+    	sw_result_im[i]=0.0;
+    	hw_result_re[i]=0.0;
+    	hw_result_im[i]=0.0;
+
+    			for(int j = 0; j < NUMELEMENTS;j++){
+    				Noise_re[i][j]=0.0;
+    				Noise_im[i][j]=0.0;
+
+    				all_cov_Mat_re[i][j]=0.0;
+    				all_cov_Mat_im[i][j]=0.0;
+    				}
+    		}
+    		for(int j = 0; j < NUMELEMENTS;j++){
+
+    			weightsRe[j]=0.0;
+    					weightsIm[j]=0.0;
+    					hw_weightsRe[j]=0.0;
+    					hw_weightsIm[j]=0.0;
+    					}
+
+	generateInput(rx_re, rx_im);
 
 	computeWeights(steeringAngle, weightsRe, weightsIm);
 
-	my_complex_Array<data_tb, NUMELEMENTS> sw_covMats;
-	my_complex_Array<data_psb, NUMELEMENTS> hw_collectedWave;
-	my_complex_Array<data_tb, NUMELEMENTS> sw_collectedWave;
-	my_complex_Array<data_psb, NUMELEMENTS> hw_Weights;
-
-	my_complex_Value<data_tb> sw_myResult;
-	my_complex_Value<data_psb> hw_myResult;
-
-	data_tb Noise_re[SIGNALLENGTH][NUMELEMENTS];
-	data_tb Noise_im[SIGNALLENGTH][NUMELEMENTS];
-	my_complex_Array<data_tb, NUMELEMENTS> array_Noise;
-
-	getNoise(Noise_re,Noise_im);
+	getNoisedata(Noise_re,Noise_im);
 
     // 打开文件
     outFile1.open("SWoutput.dat");
@@ -191,27 +218,20 @@ int main()
     	sw_collectedWave = collectWave(rx_re[i], rx_im[i], incidentAngle);
 
     	array_Noise = complexarrayConverter<data_tb, data_tb, NUMELEMENTS>(Noise_re[i], Noise_im[i]);
+
     	sw_collectedWave = addNoise(sw_collectedWave.re,sw_collectedWave.im, array_Noise.re, array_Noise.im, variance);
 
         hw_collectedWave = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(sw_collectedWave.re, sw_collectedWave.im);
 
         hw_Weights = complexarrayConverter<data_tb, data_psb, NUMELEMENTS>(weightsRe, weightsIm);
 
-        sw_myResult = SW_PhaseshiftBeamformer(sw_collectedWave.re, sw_collectedWave.im, weightsRe, weightsIm);
-        hw_myResult = PhaseshiftBeamformer(hw_collectedWave.re, hw_collectedWave.im, hw_Weights.re, hw_Weights.im);
+        SW_PhaseshiftBeamformer(sw_collectedWave.re, sw_collectedWave.im, weightsRe, weightsIm, sw_result_re+i, sw_result_im+i);
+        PhaseshiftBeamformer(hw_collectedWave.re, hw_collectedWave.im, hw_Weights.re, hw_Weights.im, hw_result_re+i, hw_result_im+i);
 
-
-        sw_result_re[i] = sw_myResult.re;
-        sw_result_im[i] = sw_myResult.im;
-
-        hw_result_re[i] = hw_myResult.re;
-        hw_result_im[i] = hw_myResult.im;
 
         // 写入数据
         outFile1 << sw_result_im[i] << endl;
         outFile2 << hw_result_im[i] << endl;
-        cout << hw_result_im[i] << endl;
-
     }
     // 关闭文件
     outFile1.close();

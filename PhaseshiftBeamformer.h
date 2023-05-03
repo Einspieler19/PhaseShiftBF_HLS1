@@ -32,11 +32,13 @@ typedef float data_tb;
 
 
 
-my_complex_Value<data_psb> PhaseshiftBeamformer(
+void PhaseshiftBeamformer(
 		data_psb cov_Mat_re[NUMELEMENTS],
 		data_psb cov_Mat_im[NUMELEMENTS],
 		data_psb weightsRe[NUMELEMENTS],
-		data_psb weightsIm[NUMELEMENTS]);
+		data_psb weightsIm[NUMELEMENTS],
+		data_psb *outRe,
+		data_psb *outIm);
 
 
 

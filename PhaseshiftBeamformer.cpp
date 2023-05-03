@@ -1,10 +1,12 @@
 #include "PhaseshiftBeamformer.h"
 
-my_complex_Value<data_psb> PhaseshiftBeamformer(
+void PhaseshiftBeamformer(
 		data_psb cov_Mat_re[NUMELEMENTS],
 		data_psb cov_Mat_im[NUMELEMENTS],
 		data_psb weightsRe[NUMELEMENTS],
-		data_psb weightsIm[NUMELEMENTS])
+		data_psb weightsIm[NUMELEMENTS],
+		data_psb *outRe,
+		data_psb *outIm)
 {
  // 初始化
 	data_psb rx_weightsRe[NUMELEMENTS];
@@ -30,9 +32,9 @@ my_complex_Value<data_psb> PhaseshiftBeamformer(
 		sum_re += rx_weightsRe[j];
 		sum_im += rx_weightsIm[j];
 	}
-	my_complex_Value<data_psb> result;
-	result.re = sum_re / NUMELEMENTS;
-	result.im = sum_im / NUMELEMENTS;
-	return result;
+	//my_complex_Value<data_psb> result;
+	*outRe = sum_re / NUMELEMENTS;
+	*outIm = sum_im / NUMELEMENTS;
+	//return result;
     }
 

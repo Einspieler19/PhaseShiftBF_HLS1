@@ -14,7 +14,7 @@
 
 //Signal
 #define CENTERFREQ 3e8
-#define SIGNALLENGTH 10
+#define SIGNALLENGTH 1001
 #define NOISEVARIANCE 0.1
 
 
@@ -24,7 +24,7 @@
 
 
 //DATA
-#define W_IN    128
+#define W_IN    64
 #define IW_IN   8
 
 //Flags
