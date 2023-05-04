@@ -60,6 +60,29 @@ for (int j = 0; j < N; j++) {
 }
 
 
+template<typename type_data>
+void computeManifoldvector(
+		type_data Angle,
+		type_data* manifoldRe,
+		type_data* manifoldIm)
+{
+	// 初始化天线阵向量
+    type_data Elementpos[NUMELEMENTS];
+    generateElementpos<type_data>(Elementpos);
+
+	// 求权重向量
+    for (int i = 0; i < NUMELEMENTS; i++) {
+    	manifoldRe[i] = hls::cos(2 * M_PI * hls::sinf(Angle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+        manifoldIm[i] = hls::sin(2 * M_PI * hls::sinf(Angle) * Elementpos[i] * SPEEDOFLIGHT / CENTERFREQ);
+    }
+}
+
+
+
+
+
+
+
 
 
 

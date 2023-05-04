@@ -33,6 +33,7 @@ void PhaseshiftBeamformer(
 		sum_im += rx_weightsIm[j];
 	}
 	//my_complex_Value<data_psb> result;
+
 	*outRe = sum_re / NUMELEMENTS;
 	*outIm = sum_im / NUMELEMENTS;
 	//return result;

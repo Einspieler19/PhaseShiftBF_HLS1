@@ -1,9 +1,10 @@
 
 
+
+
 //Phys
 #define M_PI 3.14159265358979323846
 #define SPEEDOFLIGHT 300e6
-
 
 
 //Array
@@ -16,6 +17,7 @@
 #define CENTERFREQ 3e8
 #define SIGNALLENGTH 1001
 #define NOISEVARIANCE 0.1
+#define MYSAMPLERATE_PERSAMPLE 0.01
 
 
 //Angle
@@ -27,10 +29,11 @@
 #define W_IN    64
 #define IW_IN   8
 
+
 //Flags
 #define FLOAT_DATA // Used to select error tolerance in test program
 ////////////////////////// 是否输出对比数据 //////////////////////////
-#define WINDOW_FN_DEBUG 1
+#define WINDOW_FN_DEBUG 0
 
 
 //Others
